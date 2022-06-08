@@ -1,5 +1,11 @@
 /** User class for message.ly */
 
+const db = require("../db")
+const bcrypt = require("bcrypt")
+const {BCRYPT_WORK_FACTOR} = require("../config")
+
+const ExpressError = require("../expressError")
+
 
 
 /** User of the site. */
@@ -10,11 +16,25 @@ class User {
    *    {username, password, first_name, last_name, phone}
    */
 
-  static async register({username, password, first_name, last_name, phone}) { }
+  static async register({username, password, first_name, last_name, phone}) { 
+
+    let hashedPassword = await bcrypt.hash(password, BCRYPT_WORK_FACTOR)
+    const results = await db.query(`
+
+          INSERT INTO users (username, password, first_name, last_name, phone, join_at, last_login_at)
+          VALUES ($1, $2, $3, $4, $5, current_timestamp, current_timestamp)
+          RETURNING username, password, first_name, last_name, phone`,
+          [username, hashedPassword, first_name, last_name, phone]
+          );
+    
+    return results.rows[0]
+  }
 
   /** Authenticate: is this username/password valid? Returns boolean. */
 
-  static async authenticate(username, password) { }
+  static async authenticate(username, password) { 
+    
+  }
 
   /** Update last_login_at for user */
 
@@ -34,7 +54,19 @@ class User {
    *          join_at,
    *          last_login_at } */
 
-  static async get(username) { }
+  static async get(username) { 
+    const result = await db.query(`
+          SELECT username, first_name, last_name, phone, join_at, last_login_at
+          FROM users
+          WHERE username = $1`,
+          [username]
+          );
+
+    if(result.rows.length === 0){
+      throw new ExpressError(`No such user ${username}`, 401)
+    }
+    return result.rows[0]
+  }
 
   /** Return messages from this user.
    *
