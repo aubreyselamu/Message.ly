@@ -18,19 +18,20 @@ router.post('/login', async(req, res, next) => {
     try{
         const {username, password} = req.body
 
-        if(await authenticate(username, password)){
-            let token = jwt.sign(username, SECRET_KEY )
-            await updateLoginTimestamp(username)
+        if(await User.authenticate(username, password)){
+            let token = jwt.sign({username}, SECRET_KEY )
+            User.updateLoginTimestamp(username)
             return res.json({token})
         } else {
             throw new ExpressError("Invalid user/password", 400)
         }
 
-    } catch (err){
+    } 
+    
+    catch (err){
         return next(err)
     }
 })
-
 
 
 
@@ -41,3 +42,19 @@ router.post('/login', async(req, res, next) => {
  *
  *  Make sure to update their last-login!
  */
+
+router.post("/register", async(req, res, next) => {
+    try{
+      
+        let {username} = await User.register(req.body)
+        let token = jwt.sign({username}, SECRET_KEY)
+        User.updateLoginTimestamp(username)
+        return res.json({token})
+    } 
+    
+    catch (err){
+        return next(err)
+    }
+})
+
+module.exports = router
